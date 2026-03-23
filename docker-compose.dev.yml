@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kestrelhub-postgres
+    environment:
+      POSTGRES_USER: kh
+      POSTGRES_PASSWORD: kh_dev_password
+      POSTGRES_DB: kestrelhub
+    ports:
+      - "5432:5432"
+    volumes:
+      - kestrelhub_pgdata:/var/lib/postgresql/data
+
+volumes:
+  kestrelhub_pgdata:
