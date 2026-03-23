@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KestrelHub.Agent/KestrelHub.Agent.csproj" />
+    <Project Path="src/KestrelHub.Controller/KestrelHub.Controller.csproj" />
+    <Project Path="src/KestrelHub.Dashboard/KestrelHub.Dashboard.csproj" />
+    <Project Path="src/KestrelHub.Proxy/KestrelHub.Proxy.csproj" />
+    <Project Path="src/KestrelHub.Shared/KestrelHub.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KestrelHub.Agent.Tests/KestrelHub.Agent.Tests.csproj" />
+    <Project Path="tests/KestrelHub.Controller.Tests/KestrelHub.Controller.Tests.csproj" />
+    <Project Path="tests/KestrelHub.Integration.Tests/KestrelHub.Integration.Tests.csproj" />
+    <Project Path="tests/KestrelHub.Shared.Tests/KestrelHub.Shared.Tests.csproj" />
+  </Folder>
+</Solution>

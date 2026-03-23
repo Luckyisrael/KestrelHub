@@ -1,0 +1,6 @@
+@KestrelHub.Proxy_HostAddress = http://localhost:5184
+
+GET {{KestrelHub.Proxy_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
