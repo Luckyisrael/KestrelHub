@@ -1,4 +1,5 @@
 using KestrelHub.Controller.Data;
+using KestrelHub.Controller.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IDeploymentRepository, DeploymentRepository>();
+builder.Services.AddScoped<IGitService, GitService>();
+builder.Services.AddScoped<IProjectScanner, ProjectScanner>();
+builder.Services.AddScoped<IDockerfileGenerator, DockerfileGenerator>();
+builder.Services.AddScoped<IDockerService, DockerService>();
+builder.Services.AddScoped<IPortAllocator, PortAllocator>();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
