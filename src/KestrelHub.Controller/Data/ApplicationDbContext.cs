@@ -12,6 +12,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<AppDeployment> AppDeployments => Set<AppDeployment>();
     public DbSet<ContainerInfo> ContainerInfos => Set<ContainerInfo>();
+    public DbSet<DeploymentLog> DeploymentLogs => Set<DeploymentLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +36,13 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.ImageTag).IsRequired().HasMaxLength(300);
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.HasIndex(e => e.AppDeploymentId);
+        });
+
+        modelBuilder.Entity<DeploymentLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Message).IsRequired().HasMaxLength(2000);
+            entity.HasIndex(e => e.DeploymentId);
         });
     }
 }

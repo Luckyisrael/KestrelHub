@@ -14,6 +14,9 @@ builder.Services.AddScoped<IProjectScanner, ProjectScanner>();
 builder.Services.AddScoped<IDockerfileGenerator, DockerfileGenerator>();
 builder.Services.AddScoped<IDockerService, DockerService>();
 builder.Services.AddScoped<IPortAllocator, PortAllocator>();
+builder.Services.AddScoped<IDeploymentOrchestrator, DeploymentOrchestrator>();
+builder.Services.AddSingleton<IDeploymentQueue, DeploymentQueue>();
+builder.Services.AddHostedService<DeploymentQueueHostedService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
