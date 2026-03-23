@@ -83,8 +83,11 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
             var dockerfilePathFull = Path.Combine(buildPath, "Dockerfile");
 
             await LogAsync(deploymentId, $"Building Docker image: {imageTag}");
-            var progress = new Progress<string>(msg => LogSync(deploymentId, msg));
+            var buildLogs = new List<string>();
+            var progress = new Progress<string>(msg => buildLogs.Add(msg));
             await _dockerService.BuildImageAsync(buildPath, dockerfilePathFull, imageTag, progress);
+            foreach (var msg in buildLogs)
+                await LogAsync(deploymentId, msg);
             await LogAsync(deploymentId, "Docker image built successfully.");
 
             // Step 5: Run container
@@ -144,18 +147,4 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
         await _context.SaveChangesAsync();
     }
 
-    private void LogSync(Guid deploymentId, string message)
-    {
-        var log = new DeploymentLog
-        {
-            Id = Guid.NewGuid(),
-            DeploymentId = deploymentId,
-            Timestamp = DateTime.UtcNow,
-            Message = message,
-            IsError = false
-        };
-
-        _context.DeploymentLogs.Add(log);
-        _context.SaveChanges();
-    }
 }

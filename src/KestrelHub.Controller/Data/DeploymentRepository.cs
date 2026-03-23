@@ -10,6 +10,7 @@ public interface IDeploymentRepository
     Task<AppDeployment?> GetByIdAsync(Guid id);
     Task<List<AppDeployment>> GetAllAsync();
     Task<AppDeployment?> UpdateStatusAsync(Guid id, DeploymentStatus status);
+    Task<List<DeploymentLog>> GetLogsAsync(Guid deploymentId);
 }
 
 public class DeploymentRepository : IDeploymentRepository
@@ -54,5 +55,13 @@ public class DeploymentRepository : IDeploymentRepository
         deployment.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return deployment;
+    }
+
+    public async Task<List<DeploymentLog>> GetLogsAsync(Guid deploymentId)
+    {
+        return await _context.DeploymentLogs
+            .Where(l => l.DeploymentId == deploymentId)
+            .OrderBy(l => l.Timestamp)
+            .ToListAsync();
     }
 }
