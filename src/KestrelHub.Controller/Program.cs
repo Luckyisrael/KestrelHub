@@ -1,5 +1,6 @@
 using System.Text;
 using KestrelHub.Controller.Data;
+using KestrelHub.Controller.Middleware;
 using KestrelHub.Controller.Services;
 using KestrelHub.Shared.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -85,6 +86,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseAuthentication();
+app.UseMiddleware<SetupGuardMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
