@@ -9,10 +9,10 @@ builder.RootComponents.Add<KestrelHub.Dashboard.App>("#app");
 // MudBlazor
 builder.Services.AddMudServices();
 
-// HttpClient pointing to API
+// HttpClient — same origin as the API (Blazor is served from the API)
 builder.Services.AddScoped(sp =>
 {
-    var http = new HttpClient { BaseAddress = new Uri("http://localhost:5001") };
+    var http = new HttpClient { BaseAddress = new Uri(sp.GetRequiredService<IWebAssemblyHostEnvironment>().BaseAddress) };
     return http;
 });
 

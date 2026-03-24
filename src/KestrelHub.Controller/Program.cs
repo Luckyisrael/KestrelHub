@@ -117,6 +117,11 @@ app.UseRateLimiter();
 
 app.MapControllers();
 
+// Serve Blazor WASM Dashboard
+app.UseStaticFiles();
+app.UseBlazorFrameworkFiles();
+app.MapFallbackToFile("index.html");
+
 app.Run();
 
 public partial class Program { }

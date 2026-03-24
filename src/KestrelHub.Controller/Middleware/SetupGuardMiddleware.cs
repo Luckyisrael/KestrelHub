@@ -16,6 +16,13 @@ public class SetupGuardMiddleware
     {
         var path = context.Request.Path.Value ?? "";
 
+        // Always allow static files and Blazor framework files
+        if (!path.StartsWith("/api", StringComparison.OrdinalIgnoreCase))
+        {
+            await _next(context);
+            return;
+        }
+
         // Always allow setup status endpoint
         if (path.StartsWith("/api/setup/status", StringComparison.OrdinalIgnoreCase))
         {
@@ -36,7 +43,7 @@ public class SetupGuardMiddleware
                 return;
             }
 
-            // Redirect all other requests
+            // Block all other API requests
             context.Response.StatusCode = 403;
             await context.Response.WriteAsJsonAsync(new { Error = "Setup not complete. Please visit /api/setup/status." });
             return;
