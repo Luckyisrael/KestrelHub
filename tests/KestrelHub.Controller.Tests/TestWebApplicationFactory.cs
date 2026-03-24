@@ -1,5 +1,6 @@
 using System.Text;
 using KestrelHub.Controller.Data;
+using KestrelHub.Controller.Hubs;
 using KestrelHub.Controller.Services;
 using KestrelHub.Shared.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -107,11 +108,13 @@ public class TestAppFactory : IDisposable
         builder.Services.AddHostedService<DeploymentQueueHostedService>();
         builder.Services.AddControllers()
             .AddApplicationPart(typeof(Program).Assembly);
+        builder.Services.AddSignalR();
 
         _app = builder.Build();
         _app.UseAuthentication();
         _app.UseAuthorization();
         _app.MapControllers();
+        _app.MapHub<DeploymentHub>("/hubs/deployments");
 
         // Create schema
         using (var scope = _app.Services.CreateScope())

@@ -5,8 +5,11 @@
 @using KestrelHub.Shared.Models
 @using KestrelHub.Shared.Enums
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
 @inject HttpClient Http
+@inject KestrelHub.Dashboard.Services.JwtAuthStateProvider AuthStateProvider
 @inject NavigationManager Navigation
+@implements IAsyncDisposable
 
 <PageTitle>@(_deployment?.Name ?? "Deployment") — KestrelHub</PageTitle>
 
@@ -33,12 +36,16 @@
                 </MudButton>
                 <MudText Typo="Typo.h4" Style="color: #e4e6eb;">@_deployment.Name</MudText>
                 <div style="display: flex; gap: 16px; align-items: center; margin-top: 8px;">
-                    <StatusChip Status="@_deployment.Status" />
+                    <StatusChip Status="@_currentStatus" />
                     @if (!string.IsNullOrEmpty(_deployment.AssignedDomain))
                     {
                         <MudText Typo="Typo.body2" Style="color: #7c3aed;">
                             @_deployment.AssignedDomain
                         </MudText>
+                    }
+                    @if (_hubConnected)
+                    {
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;" title="Live"></span>
                     }
                 </div>
             </div>
@@ -48,7 +55,7 @@
         <MudTabs Elevation="0" Rounded="false" Color="Color.Primary"
                  Style="background: #12141a; border-radius: 12px; border: 1px solid #1e2028;">
             <MudTabPanel Text="Logs" Style="color: #e4e6eb;">
-                <div style="background: #0a0c0f; border-radius: 0 0 12px 12px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #8a8d93; min-height: 300px; max-height: 500px; overflow-y: auto;">
+                <div id="log-terminal" style="background: #0a0c0f; border-radius: 0 0 12px 12px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #8a8d93; min-height: 400px; max-height: 600px; overflow-y: auto;">
                     @if (_logs.Count == 0)
                     {
                         <div style="color: #8a8d93; padding: 32px; text-align: center;">
@@ -59,9 +66,9 @@
                     {
                         @foreach (var log in _logs)
                         {
-                            <div style="margin-bottom: 2px; color: @(log.IsError ? "#ef4444" : "#8a8d93");">
-                                <span style="color: #1e2028;">[@log.Timestamp.ToString("HH:mm:ss")]</span>
-                                @log.Message
+                            <div style="margin-bottom: 4px; line-height: 1.6;">
+                                <span style="color: #1e2028; font-size: 11px;">@log.Timestamp.ToLocalTime().ToString("HH:mm:ss")</span>
+                                <span style="color: @(log.IsError ? "#ef4444" : "#8a8d93");">@log.Message</span>
                             </div>
                         }
                     }
@@ -85,8 +92,11 @@
     [Parameter] public Guid Id { get; set; }
 
     private AppDeployment? _deployment;
+    private DeploymentStatus _currentStatus;
     private List<DeploymentLog> _logs = [];
     private bool _loading = true;
+    private HubConnection? _hubConnection;
+    private bool _hubConnected;
 
     protected override async Task OnInitializedAsync()
     {
@@ -106,17 +116,81 @@
                     CreatedAt = response.GetProperty("createdAt").GetDateTime(),
                     UpdatedAt = response.GetProperty("updatedAt").GetDateTime()
                 };
+                _currentStatus = _deployment.Status;
 
                 if (response.TryGetProperty("logs", out var logsElement))
                 {
-                    _logs = JsonSerializer.Deserialize<List<DeploymentLog>>(logsElement.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+                    _logs = JsonSerializer.Deserialize<List<DeploymentLog>>(logsElement.GetRawText(),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
                 }
             }
+
+            await ConnectToSignalR();
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading deployment: {ex.Message}");
-        }
+        catch { }
         _loading = false;
+    }
+
+    private async Task ConnectToSignalR()
+    {
+        var token = AuthStateProvider.AccessToken;
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(new Uri("http://localhost:5001/hubs/deployments"), options =>
+            {
+                if (!string.IsNullOrEmpty(token))
+                    options.AccessTokenProvider = () => Task.FromResult(token);
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<Guid, string, bool>("ReceiveLog", (deploymentId, message, isError) =>
+        {
+            if (deploymentId == Id)
+            {
+                _logs.Add(new DeploymentLog
+                {
+                    Id = Guid.NewGuid(),
+                    DeploymentId = deploymentId,
+                    Timestamp = DateTime.UtcNow,
+                    Message = message,
+                    IsError = isError
+                });
+                InvokeAsync(StateHasChanged);
+            }
+        });
+
+        _hubConnection.On<Guid, string>("StatusChanged", (deploymentId, newStatus) =>
+        {
+            if (deploymentId == Id)
+            {
+                _currentStatus = Enum.Parse<DeploymentStatus>(newStatus);
+                InvokeAsync(StateHasChanged);
+            }
+        });
+
+        try
+        {
+            await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("JoinDeployment", Id);
+            _hubConnected = true;
+        }
+        catch
+        {
+            _hubConnected = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            try
+            {
+                await _hubConnection.InvokeAsync("LeaveDeployment", Id);
+                await _hubConnection.DisposeAsync();
+            }
+            catch { }
+        }
     }
 }

@@ -1,6 +1,8 @@
 using KestrelHub.Controller.Data;
+using KestrelHub.Controller.Hubs;
 using KestrelHub.Shared.Enums;
 using KestrelHub.Shared.Models;
+using Microsoft.AspNetCore.SignalR;
 
 namespace KestrelHub.Controller.Services;
 
@@ -18,6 +20,7 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
     private readonly IDockerService _dockerService;
     private readonly IPortAllocator _portAllocator;
     private readonly IRouteService _routeService;
+    private readonly IHubContext<DeploymentHub, IDeploymentHubClient> _hubContext;
     private readonly ApplicationDbContext _context;
 
     private const string BuildsBasePath = "/tmp/kestrelhub-builds";
@@ -30,6 +33,7 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
         IDockerService dockerService,
         IPortAllocator portAllocator,
         IRouteService routeService,
+        IHubContext<DeploymentHub, IDeploymentHubClient> hubContext,
         ApplicationDbContext context)
     {
         _repository = repository;
@@ -39,6 +43,8 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
         _dockerService = dockerService;
         _portAllocator = portAllocator;
         _routeService = routeService;
+        _hubContext = hubContext;
+        _context = context;
         _context = context;
     }
 
@@ -140,6 +146,7 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
     {
         await LogAsync(deploymentId, message, isError: true);
         await _repository.UpdateStatusAsync(deploymentId, DeploymentStatus.Failed);
+        await _hubContext.Clients.Group(deploymentId.ToString()).StatusChanged(deploymentId, "Failed");
     }
 
     private async Task LogAsync(Guid deploymentId, string message, bool isError = false)
@@ -155,6 +162,8 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
 
         _context.DeploymentLogs.Add(log);
         await _context.SaveChangesAsync();
+
+        await _hubContext.Clients.Group(deploymentId.ToString()).ReceiveLog(deploymentId, message, isError);
     }
 
 }

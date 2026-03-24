@@ -1,9 +1,13 @@
 using FluentAssertions;
 using KestrelHub.Controller.Data;
+using KestrelHub.Controller.Hubs;
 using KestrelHub.Controller.Services;
 using KestrelHub.Shared.Enums;
 using KestrelHub.Shared.Models;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Xunit;
 
 namespace KestrelHub.Controller.Tests;
@@ -35,9 +39,15 @@ public class DeploymentOrchestratorTests : IDisposable
         _portAllocator = new FakePortAllocator();
         _routeService = new FakeRouteService();
 
+        var mockHubClients = new Mock<IHubClients<IDeploymentHubClient>>();
+        var mockClientProxy = new Mock<IDeploymentHubClient>();
+        mockHubClients.Setup(c => c.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
+        var mockHubContext = new Mock<IHubContext<DeploymentHub, IDeploymentHubClient>>();
+        mockHubContext.Setup(h => h.Clients).Returns(mockHubClients.Object);
+
         _orchestrator = new DeploymentOrchestrator(
             _repository, _gitService, _projectScanner,
-            _dockerfileGenerator, _dockerService, _portAllocator, _routeService, _context);
+            _dockerfileGenerator, _dockerService, _portAllocator, _routeService, mockHubContext.Object, _context);
     }
 
     public void Dispose()

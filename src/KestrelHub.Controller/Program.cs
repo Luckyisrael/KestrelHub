@@ -1,5 +1,6 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using KestrelHub.Controller.Hubs;
 using KestrelHub.Controller.Data;
 using KestrelHub.Controller.Middleware;
 using KestrelHub.Controller.Services;
@@ -98,6 +99,7 @@ builder.Services.AddHostedService<DeploymentQueueHostedService>();
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
 
 // Rate limiting
 builder.Services.AddRateLimiter(options =>
@@ -131,6 +133,7 @@ app.UseMiddleware<ActiveUserMiddleware>();
 app.UseRateLimiter();
 
 app.MapControllers();
+app.MapHub<DeploymentHub>("/hubs/deployments");
 
 app.Run();
 
