@@ -16,6 +16,7 @@ public class DeploymentOrchestratorTests : IDisposable
     private readonly FakeDockerfileGenerator _dockerfileGenerator;
     private readonly FakeDockerService _dockerService;
     private readonly FakePortAllocator _portAllocator;
+    private readonly FakeRouteService _routeService;
     private readonly DeploymentRepository _repository;
     private readonly DeploymentOrchestrator _orchestrator;
 
@@ -32,10 +33,11 @@ public class DeploymentOrchestratorTests : IDisposable
         _dockerfileGenerator = new FakeDockerfileGenerator();
         _dockerService = new FakeDockerService();
         _portAllocator = new FakePortAllocator();
+        _routeService = new FakeRouteService();
 
         _orchestrator = new DeploymentOrchestrator(
             _repository, _gitService, _projectScanner,
-            _dockerfileGenerator, _dockerService, _portAllocator, _context);
+            _dockerfileGenerator, _dockerService, _portAllocator, _routeService, _context);
     }
 
     public void Dispose()
@@ -258,6 +260,14 @@ public class FakeDockerService : IDockerService
 public class FakePortAllocator : IPortAllocator
 {
     public Task<int> AllocateNextPortAsync() => Task.FromResult(8100);
+}
+
+public class FakeRouteService : IRouteService
+{
+    public Task<string> AssignDomainAsync(AppDeployment deployment, int port)
+        => Task.FromResult($"{deployment.Name}.apps.localhost");
+
+    public Task RemoveRouteAsync(Guid deploymentId) => Task.CompletedTask;
 }
 
 #endregion

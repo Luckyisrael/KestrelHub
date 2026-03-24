@@ -15,6 +15,10 @@ builder.Services.AddScoped<IDockerfileGenerator, DockerfileGenerator>();
 builder.Services.AddScoped<IDockerService, DockerService>();
 builder.Services.AddScoped<IPortAllocator, PortAllocator>();
 builder.Services.AddScoped<IDeploymentOrchestrator, DeploymentOrchestrator>();
+builder.Services.AddHttpClient<IRouteService, RouteService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["KestrelHub:ProxyUrl"] ?? "http://localhost:5002");
+});
 builder.Services.AddSingleton<IDeploymentQueue, DeploymentQueue>();
 builder.Services.AddHostedService<DeploymentQueueHostedService>();
 

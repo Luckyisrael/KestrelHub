@@ -17,6 +17,7 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
     private readonly IDockerfileGenerator _dockerfileGenerator;
     private readonly IDockerService _dockerService;
     private readonly IPortAllocator _portAllocator;
+    private readonly IRouteService _routeService;
     private readonly ApplicationDbContext _context;
 
     private const string BuildsBasePath = "/tmp/kestrelhub-builds";
@@ -28,6 +29,7 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
         IDockerfileGenerator dockerfileGenerator,
         IDockerService dockerService,
         IPortAllocator portAllocator,
+        IRouteService routeService,
         ApplicationDbContext context)
     {
         _repository = repository;
@@ -36,6 +38,7 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
         _dockerfileGenerator = dockerfileGenerator;
         _dockerService = dockerService;
         _portAllocator = portAllocator;
+        _routeService = routeService;
         _context = context;
     }
 
@@ -104,7 +107,14 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
             _context.ContainerInfos.Add(containerInfo);
             await _context.SaveChangesAsync();
 
-            // Step 6: Update status → Running
+            // Step 6: Assign domain and route
+            var domain = await _routeService.AssignDomainAsync(deployment, hostPort);
+            deployment.AssignedDomain = domain;
+            deployment.AssignedPort = hostPort;
+            await _context.SaveChangesAsync();
+            await LogAsync(deploymentId, $"Assigned domain: {domain}");
+
+            // Step 7: Update status → Running
             await _repository.UpdateStatusAsync(deploymentId, DeploymentStatus.Running);
             await LogAsync(deploymentId, $"Deployment running on port {hostPort}.");
         }

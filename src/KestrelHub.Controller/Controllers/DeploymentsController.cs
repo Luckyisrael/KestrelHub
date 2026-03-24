@@ -14,17 +14,20 @@ public class DeploymentsController : ControllerBase
     private readonly IDeploymentRepository _repository;
     private readonly IDeploymentQueue _queue;
     private readonly IDockerService _dockerService;
+    private readonly IRouteService _routeService;
     private readonly ApplicationDbContext _context;
 
     public DeploymentsController(
         IDeploymentRepository repository,
         IDeploymentQueue queue,
         IDockerService dockerService,
+        IRouteService routeService,
         ApplicationDbContext context)
     {
         _repository = repository;
         _queue = queue;
         _dockerService = dockerService;
+        _routeService = routeService;
         _context = context;
     }
 
@@ -94,6 +97,7 @@ public class DeploymentsController : ControllerBase
                 container.Status = "stopped";
             }
             await _context.SaveChangesAsync();
+            await _routeService.RemoveRouteAsync(id);
         }
 
         await _repository.UpdateStatusAsync(id, DeploymentStatus.Stopped);
@@ -120,6 +124,8 @@ public class DeploymentsController : ControllerBase
             }
             await _context.SaveChangesAsync();
         }
+
+        await _routeService.RemoveRouteAsync(id);
 
         _context.AppDeployments.Remove(deployment);
         await _context.SaveChangesAsync();

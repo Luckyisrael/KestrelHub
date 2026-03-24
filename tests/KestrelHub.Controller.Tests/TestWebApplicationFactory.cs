@@ -43,6 +43,7 @@ public class TestAppFactory : IDisposable
         builder.Services.AddScoped<IDockerfileGenerator, FakeDockerfileGeneratorForApiTests>();
         builder.Services.AddScoped<IDockerService, FakeDockerServiceForApiTests>();
         builder.Services.AddScoped<IPortAllocator, FakePortAllocatorForApiTests>();
+        builder.Services.AddScoped<IRouteService, FakeRouteServiceForApiTests>();
         builder.Services.AddScoped<IDeploymentOrchestrator, DeploymentOrchestrator>();
         builder.Services.AddSingleton<IDeploymentQueue, DeploymentQueue>();
         builder.Services.AddHostedService<DeploymentQueueHostedService>();
@@ -120,4 +121,12 @@ public class FakeDockerfileGeneratorForApiTests : IDockerfileGenerator
 public class FakePortAllocatorForApiTests : IPortAllocator
 {
     public Task<int> AllocateNextPortAsync() => Task.FromResult(8100);
+}
+
+public class FakeRouteServiceForApiTests : IRouteService
+{
+    public Task<string> AssignDomainAsync(AppDeployment deployment, int port)
+        => Task.FromResult($"{deployment.Name}.apps.localhost");
+
+    public Task RemoveRouteAsync(Guid deploymentId) => Task.CompletedTask;
 }

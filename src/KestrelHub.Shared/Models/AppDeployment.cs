@@ -9,6 +9,8 @@ public class AppDeployment
     public string GitUrl { get; set; } = string.Empty;
     public string Branch { get; set; } = "main";
     public DeploymentStatus Status { get; set; } = DeploymentStatus.Pending;
+    public string? AssignedDomain { get; set; }
+    public int? AssignedPort { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

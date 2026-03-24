@@ -25,6 +25,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.GitUrl).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Branch).HasMaxLength(100);
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.AssignedDomain).HasMaxLength(300);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.UpdatedAt).IsRequired();
         });
