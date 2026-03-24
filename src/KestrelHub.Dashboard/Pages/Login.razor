@@ -1,4 +1,6 @@
 @page "/login"
+@using System.Net.Http.Json
+@using System.Text.Json
 @using KestrelHub.Dashboard.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @inject JwtAuthStateProvider AuthStateProvider
@@ -55,6 +57,21 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Check if setup is needed first
+        try
+        {
+            var setupResponse = await Http.GetFromJsonAsync<JsonElement>("/api/setup/status");
+            if (!setupResponse.GetProperty("isSetupComplete").GetBoolean())
+            {
+                Navigation.NavigateTo("/setup");
+                return;
+            }
+        }
+        catch
+        {
+            // API unreachable — show login anyway
+        }
+
         var state = await AuthStateProvider.GetAuthenticationStateAsync();
         if (state.User.Identity?.IsAuthenticated == true)
         {
