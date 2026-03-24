@@ -1,8 +1,11 @@
+using System.Text;
 using KestrelHub.Controller.Data;
 using KestrelHub.Controller.Services;
 using KestrelHub.Shared.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,25 +16,46 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Identity with strict password policy
 builder.Services.AddIdentity<KestrelHubUser, KestrelHubRole>(options =>
 {
-    // Password: minimum 12 chars, require uppercase, lowercase, digit, special
     options.Password.RequireDigit = true;
     options.Password.RequireLowercase = true;
     options.Password.RequireUppercase = true;
     options.Password.RequireNonAlphanumeric = true;
     options.Password.RequiredLength = 12;
     options.Password.RequiredUniqueChars = 4;
-
-    // Lockout: 5 failed attempts → 15 minutes
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     options.Lockout.AllowedForNewUsers = true;
-
-    // User
     options.User.RequireUniqueEmail = true;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+// JWT Authentication
+var jwtSecret = builder.Configuration["Jwt:Secret"]
+    ?? throw new InvalidOperationException("Jwt:Secret is required and must be at least 32 characters.");
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "KestrelHub",
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "KestrelHub",
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
+builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IDeploymentRepository, DeploymentRepository>();
 builder.Services.AddScoped<IGitService, GitService>();
 builder.Services.AddScoped<IProjectScanner, ProjectScanner>();
@@ -52,7 +76,6 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -61,7 +84,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 
-// Make Program accessible for WebApplicationFactory in tests
 public partial class Program { }

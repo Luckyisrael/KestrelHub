@@ -1,12 +1,16 @@
+using System.Text;
 using KestrelHub.Controller.Data;
 using KestrelHub.Controller.Services;
 using KestrelHub.Shared.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 
 namespace KestrelHub.Controller.Tests;
 
@@ -31,12 +35,59 @@ public class TestAppFactory : IDisposable
 
         builder.WebHost.UseTestServer();
 
+        // JWT config for tests
+        builder.Configuration["Jwt:Secret"] = "Test-Secret-Key-Min32CharactersLong!";
+        builder.Configuration["Jwt:Issuer"] = "KestrelHub";
+        builder.Configuration["Jwt:Audience"] = "KestrelHub";
+        builder.Configuration["Jwt:AccessTokenMinutes"] = "15";
+        builder.Configuration["Jwt:RefreshTokenDays"] = "7";
+
         builder.Services.AddSingleton(_sqliteConnection);
         builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             options.UseSqlite(sp.GetRequiredService<SqliteConnection>());
         });
 
+        // Identity
+        builder.Services.AddIdentity<KestrelHubUser, KestrelHubRole>(options =>
+        {
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireNonAlphanumeric = true;
+            options.Password.RequiredLength = 12;
+            options.Password.RequiredUniqueChars = 4;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            options.Lockout.AllowedForNewUsers = true;
+            options.User.RequireUniqueEmail = true;
+        })
+        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddDefaultTokenProviders();
+
+        // JWT Auth
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("Test-Secret-Key-Min32CharactersLong!")),
+                ValidateIssuer = true,
+                ValidIssuer = "KestrelHub",
+                ValidateAudience = true,
+                ValidAudience = "KestrelHub",
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+        builder.Services.AddAuthorization();
+
+        builder.Services.AddScoped<IJwtService, JwtService>();
         builder.Services.AddScoped<IDeploymentRepository, DeploymentRepository>();
         builder.Services.AddScoped<IGitService, FakeGitServiceForApiTests>();
         builder.Services.AddScoped<IProjectScanner, FakeProjectScannerForApiTests>();
@@ -51,6 +102,8 @@ public class TestAppFactory : IDisposable
             .AddApplicationPart(typeof(Program).Assembly);
 
         _app = builder.Build();
+        _app.UseAuthentication();
+        _app.UseAuthorization();
         _app.MapControllers();
 
         // Create schema

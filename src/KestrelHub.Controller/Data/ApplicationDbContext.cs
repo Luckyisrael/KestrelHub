@@ -16,6 +16,7 @@ public class ApplicationDbContext : IdentityDbContext<KestrelHubUser, KestrelHub
     public DbSet<ContainerInfo> ContainerInfos => Set<ContainerInfo>();
     public DbSet<DeploymentLog> DeploymentLogs => Set<DeploymentLog>();
     public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -75,6 +76,14 @@ public class ApplicationDbContext : IdentityDbContext<KestrelHubUser, KestrelHub
         modelBuilder.Entity<SystemSettings>(entity =>
         {
             entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(128);
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.HasIndex(e => e.UserId);
         });
     }
 }
