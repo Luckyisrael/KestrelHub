@@ -26,6 +26,7 @@ public class ApplicationDbContext : IdentityDbContext<KestrelHubUser, KestrelHub
     public DbSet<Secret> Secrets => Set<Secret>();
     public DbSet<SecretAuditLog> SecretAuditLogs => Set<SecretAuditLog>();
     public DbSet<AppSetting> AppSettings => Set<AppSetting>();
+    public DbSet<UserInvite> UserInvites => Set<UserInvite>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
