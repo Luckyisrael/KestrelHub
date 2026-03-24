@@ -69,6 +69,7 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
 
             var body = await response.Content.ReadFromJsonAsync<JsonElement>();
             _accessToken = body.GetProperty("accessToken").GetString();
+            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
             return true;
         }
