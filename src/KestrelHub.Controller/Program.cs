@@ -1,10 +1,12 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using KestrelHub.Controller.Data;
 using KestrelHub.Controller.Middleware;
 using KestrelHub.Controller.Services;
 using KestrelHub.Shared.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -83,6 +85,19 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
+// Rate limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("auth", limiter =>
+    {
+        limiter.PermitLimit = 10;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiter.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = 429;
+});
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
@@ -97,6 +112,7 @@ app.UseAuthentication();
 app.UseMiddleware<SetupGuardMiddleware>();
 app.UseAuthorization();
 app.UseMiddleware<ActiveUserMiddleware>();
+app.UseRateLimiter();
 
 app.MapControllers();
 

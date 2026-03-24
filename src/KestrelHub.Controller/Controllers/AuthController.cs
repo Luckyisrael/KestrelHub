@@ -4,6 +4,7 @@ using KestrelHub.Controller.Services;
 using KestrelHub.Shared.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace KestrelHub.Controller.Controllers;
@@ -33,6 +34,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         // Generic error message — no user enumeration
