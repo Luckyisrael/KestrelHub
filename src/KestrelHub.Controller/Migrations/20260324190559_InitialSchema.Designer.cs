@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace KestrelHub.Controller.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260324174918_AddRefreshToken")]
-    partial class AddRefreshToken
+    [Migration("20260324190559_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -154,21 +154,21 @@ namespace KestrelHub.Controller.Migrations
                         new
                         {
                             Id = "1",
-                            ConcurrencyStamp = "aeb3af5d-4a4a-444b-90e5-c70943483c1a",
+                            ConcurrencyStamp = "54d487b4-ad36-4271-8549-4ae3ae22e7ca",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
                             Id = "2",
-                            ConcurrencyStamp = "7d4073c1-1adb-473c-bd20-3b82ddeabdaa",
+                            ConcurrencyStamp = "d9a46c32-2faf-4528-a1c0-c6679bebabd7",
                             Name = "Developer",
                             NormalizedName = "DEVELOPER"
                         },
                         new
                         {
                             Id = "3",
-                            ConcurrencyStamp = "779ad9d0-3746-4fe6-9211-329d506fce93",
+                            ConcurrencyStamp = "474d3447-fa6f-4e37-a681-c831c20b50a1",
                             Name = "Viewer",
                             NormalizedName = "VIEWER"
                         });
@@ -318,8 +318,8 @@ namespace KestrelHub.Controller.Migrations
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
-                            InstalledAt = new DateTime(2026, 3, 24, 17, 49, 16, 193, DateTimeKind.Utc).AddTicks(3839),
-                            InstanceId = new Guid("6d799403-72f0-498f-91c2-16c8a59b8bfd"),
+                            InstalledAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            InstanceId = new Guid("00000000-0000-0000-0000-000000000002"),
                             IsSetupComplete = false
                         });
                 });

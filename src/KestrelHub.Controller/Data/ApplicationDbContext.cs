@@ -2,6 +2,7 @@ using KestrelHub.Shared.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace KestrelHub.Controller.Data;
 
@@ -10,6 +11,11 @@ public class ApplicationDbContext : IdentityDbContext<KestrelHubUser, KestrelHub
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
     }
 
     public DbSet<AppDeployment> AppDeployments => Set<AppDeployment>();
@@ -35,8 +41,8 @@ public class ApplicationDbContext : IdentityDbContext<KestrelHubUser, KestrelHub
             {
                 Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
                 IsSetupComplete = false,
-                InstanceId = Guid.NewGuid(),
-                InstalledAt = DateTime.UtcNow
+                InstanceId = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                InstalledAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             }
         );
 
