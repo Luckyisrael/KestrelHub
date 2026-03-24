@@ -1,0 +1,19 @@
+@using KestrelHub.Shared.Enums
+
+<span class="status-chip @StatusClass">
+    @Status.ToString()
+</span>
+
+@code {
+    [Parameter] public DeploymentStatus Status { get; set; }
+
+    private string StatusClass => Status switch
+    {
+        DeploymentStatus.Pending => "status-pending",
+        DeploymentStatus.Building => "status-building",
+        DeploymentStatus.Running => "status-running",
+        DeploymentStatus.Failed => "status-failed",
+        DeploymentStatus.Stopped => "status-stopped",
+        _ => "status-pending"
+    };
+}

@@ -1,0 +1,73 @@
+@using System.Net.Http.Json
+@using KestrelHub.Shared.Models
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject MudBlazor.IDialogService DialogService
+
+<MudDialog Style="background: #12141a; color: #e4e6eb;">
+    <DialogContent>
+        <MudTextField @bind-Value="_name" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Placeholder="my-app" Class="mb-4" />
+        <MudTextField @bind-Value="_gitUrl" Label="Git Repository URL" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Placeholder="https://github.com/user/repo.git" Class="mb-4" />
+        <MudTextField @bind-Value="_branch" Label="Branch" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Placeholder="main" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Outlined" Style="color: #8a8d93;">Cancel</MudButton>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@_submitting" Style="color: #000; font-weight: 600;">
+            @if (_submitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="margin-right: 8px;" />
+            }
+            Deploy
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private string _name = "";
+    private string _gitUrl = "";
+    private string _branch = "main";
+    private bool _submitting;
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_gitUrl))
+        {
+            Snackbar.Add("Git URL is required", Severity.Warning);
+            return;
+        }
+
+        _submitting = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/deployments", new
+            {
+                GitUrl = _gitUrl,
+                Branch = _branch,
+                Name = string.IsNullOrWhiteSpace(_name) ? null : _name
+            });
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Deployment created", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Failed to create deployment", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        _submitting = false;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -92,6 +92,7 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
     }
 
     public bool IsAuthenticated => !string.IsNullOrEmpty(_accessToken);
+    public string? AccessToken => _accessToken;
 
     private static AuthenticationState CreateAnonymousState()
     {
