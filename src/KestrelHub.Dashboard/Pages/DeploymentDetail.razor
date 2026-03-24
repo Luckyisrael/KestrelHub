@@ -7,8 +7,9 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.SignalR.Client
 @inject HttpClient Http
-@inject KestrelHub.Dashboard.Services.JwtAuthStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject KestrelHub.Dashboard.Services.JwtAuthStateProvider AuthStateProvider
 @implements IAsyncDisposable
 
 <PageTitle>@(_deployment?.Name ?? "Deployment") — KestrelHub</PageTitle>
@@ -75,8 +76,31 @@
                 </div>
             </MudTabPanel>
             <MudTabPanel Text="Settings">
-                <div style="padding: 24px; color: #8a8d93;">
-                    <MudText Typo="Typo.body2">Appsettings editor coming in Step 3.5</MudText>
+                <div style="padding: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <MudText Typo="Typo.h6" Style="color: #e4e6eb;">App Settings</MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                   OnClick="@AddSetting" Style="color: #000; font-weight: 600;">
+                            Add Setting
+                        </MudButton>
+                    </div>
+                    @if (_settings.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Style="color: #8a8d93;">No settings configured.</MudText>
+                    }
+                    else
+                    {
+                        @foreach (var setting in _settings)
+                        {
+                            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px; background: #0a0c0f; padding: 12px; border-radius: 8px;">
+                                <MudText Typo="Typo.body2" Style="color: #00d4ff; font-family: monospace; min-width: 120px;">@setting.Key</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #e4e6eb; font-family: monospace; flex: 1;">@setting.Value</MudText>
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                               OnClick="@(() => DeleteSetting(setting.Id))"
+                                               Style="color: #ef4444;" />
+                            </div>
+                        }
+                    }
                 </div>
             </MudTabPanel>
             <MudTabPanel Text="Secrets">
@@ -94,6 +118,7 @@
     private AppDeployment? _deployment;
     private DeploymentStatus _currentStatus;
     private List<DeploymentLog> _logs = [];
+    private List<AppSetting> _settings = [];
     private bool _loading = true;
     private HubConnection? _hubConnection;
     private bool _hubConnected;
@@ -126,6 +151,7 @@
             }
 
             await ConnectToSignalR();
+            await LoadSettings();
         }
         catch { }
         _loading = false;
@@ -178,6 +204,34 @@
         catch
         {
             _hubConnected = false;
+        }
+    }
+
+    private async Task LoadSettings()
+    {
+        try
+        {
+            _settings = await Http.GetFromJsonAsync<List<AppSetting>>($"/api/deployments/{Id}/settings") ?? [];
+        }
+        catch { }
+    }
+
+    private void AddSetting()
+    {
+        Snackbar.Add("Use the Settings API to add settings", Severity.Info);
+    }
+
+    private async Task DeleteSetting(Guid id)
+    {
+        try
+        {
+            await Http.DeleteAsync($"/api/deployments/{Id}/settings/{id}");
+            _settings.RemoveAll(s => s.Id == id);
+            Snackbar.Add("Setting deleted", Severity.Warning);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to delete: {ex.Message}", Severity.Error);
         }
     }
 

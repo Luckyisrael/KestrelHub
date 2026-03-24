@@ -25,6 +25,7 @@ public class ApplicationDbContext : IdentityDbContext<KestrelHubUser, KestrelHub
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Secret> Secrets => Set<Secret>();
     public DbSet<SecretAuditLog> SecretAuditLogs => Set<SecretAuditLog>();
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
