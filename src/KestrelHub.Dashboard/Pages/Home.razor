@@ -1,7 +1,11 @@
-﻿@page "/"
+@page "/"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-<PageTitle>Home</PageTitle>
+<PageTitle>KestrelHub</PageTitle>
 
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
+<div style="padding: 24px;">
+    <MudText Typo="Typo.h4" Style="color: #e4e6eb;">Dashboard</MudText>
+    <MudText Typo="Typo.body1" Style="color: #8a8d93; margin-top: 8px;">
+        Welcome to KestrelHub. Use the sidebar to manage your deployments.
+    </MudText>
+</div>
