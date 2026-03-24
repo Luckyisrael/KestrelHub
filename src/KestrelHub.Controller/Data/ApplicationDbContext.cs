@@ -1,9 +1,11 @@
 using KestrelHub.Shared.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace KestrelHub.Controller.Data;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : IdentityDbContext<KestrelHubUser, KestrelHubRole, string>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -13,10 +15,34 @@ public class ApplicationDbContext : DbContext
     public DbSet<AppDeployment> AppDeployments => Set<AppDeployment>();
     public DbSet<ContainerInfo> ContainerInfos => Set<ContainerInfo>();
     public DbSet<DeploymentLog> DeploymentLogs => Set<DeploymentLog>();
+    public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Seed roles
+        modelBuilder.Entity<KestrelHubRole>().HasData(
+            new KestrelHubRole { Id = "1", Name = "Admin", NormalizedName = "ADMIN" },
+            new KestrelHubRole { Id = "2", Name = "Developer", NormalizedName = "DEVELOPER" },
+            new KestrelHubRole { Id = "3", Name = "Viewer", NormalizedName = "VIEWER" }
+        );
+
+        // Seed SystemSettings (single row)
+        modelBuilder.Entity<SystemSettings>().HasData(
+            new SystemSettings
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                IsSetupComplete = false,
+                InstanceId = Guid.NewGuid(),
+                InstalledAt = DateTime.UtcNow
+            }
+        );
+
+        modelBuilder.Entity<KestrelHubUser>(entity =>
+        {
+            entity.Property(e => e.DisplayName).HasMaxLength(200);
+        });
 
         modelBuilder.Entity<AppDeployment>(entity =>
         {
@@ -44,6 +70,11 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Message).IsRequired().HasMaxLength(2000);
             entity.HasIndex(e => e.DeploymentId);
+        });
+
+        modelBuilder.Entity<SystemSettings>(entity =>
+        {
+            entity.HasKey(e => e.Id);
         });
     }
 }
