@@ -3,12 +3,14 @@ using KestrelHub.Controller.DTOs;
 using KestrelHub.Controller.Services;
 using KestrelHub.Shared.Enums;
 using KestrelHub.Shared.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KestrelHub.Controller.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = "AnyAuthenticatedUser")]
 public class DeploymentsController : ControllerBase
 {
     private readonly IDeploymentRepository _repository;
@@ -32,6 +34,7 @@ public class DeploymentsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "DeveloperOrAbove")]
     public async Task<IActionResult> Create([FromBody] CreateDeploymentRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.GitUrl))
@@ -79,6 +82,7 @@ public class DeploymentsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/stop")]
+    [Authorize(Policy = "DeveloperOrAbove")]
     public async Task<IActionResult> Stop(Guid id)
     {
         var deployment = await _repository.GetByIdAsync(id);
@@ -105,6 +109,7 @@ public class DeploymentsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var deployment = await _repository.GetByIdAsync(id);

@@ -3,11 +3,8 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
-using KestrelHub.Controller.Data;
 using KestrelHub.Controller.DTOs;
-using KestrelHub.Shared.Enums;
 using KestrelHub.Shared.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace KestrelHub.Controller.Tests;
@@ -22,6 +19,33 @@ public class DeploymentsControllerTests : IDisposable
     {
         _factory = new TestAppFactory();
         _client = _factory.Client;
+
+        // Complete setup and login to get auth token
+        SetupAndLoginAsync().GetAwaiter().GetResult();
+    }
+
+    private async Task SetupAndLoginAsync()
+    {
+        // Complete setup
+        await _client.PostAsJsonAsync("/api/setup/complete", new
+        {
+            AdminEmail = "deploytest@test.com",
+            AdminPassword = "StrongPass123!@",
+            AdminDisplayName = "Deploy Tester"
+        });
+
+        // Login
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", new
+        {
+            Email = "deploytest@test.com",
+            Password = "StrongPass123!@"
+        });
+
+        var loginBody = await loginResponse.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var token = loginBody.GetProperty("accessToken").GetString();
+
+        _client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
     }
 
     public void Dispose()

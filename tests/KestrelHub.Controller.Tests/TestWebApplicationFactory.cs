@@ -85,8 +85,15 @@ public class TestAppFactory : IDisposable
                 ClockSkew = TimeSpan.Zero
             };
         });
-        builder.Services.AddAuthorization();
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+            options.AddPolicy("DeveloperOrAbove", policy => policy.RequireRole("Admin", "Developer"));
+            options.AddPolicy("AnyAuthenticatedUser", policy => policy.RequireAuthenticatedUser());
+        });
 
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
         builder.Services.AddScoped<IJwtService, JwtService>();
         builder.Services.AddScoped<IDeploymentRepository, DeploymentRepository>();
         builder.Services.AddScoped<IGitService, FakeGitServiceForApiTests>();
