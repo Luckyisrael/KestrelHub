@@ -23,6 +23,8 @@ public class ApplicationDbContext : IdentityDbContext<KestrelHubUser, KestrelHub
     public DbSet<DeploymentLog> DeploymentLogs => Set<DeploymentLog>();
     public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Secret> Secrets => Set<Secret>();
+    public DbSet<SecretAuditLog> SecretAuditLogs => Set<SecretAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -90,6 +92,24 @@ public class ApplicationDbContext : IdentityDbContext<KestrelHubUser, KestrelHub
             entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(128);
             entity.HasIndex(e => e.TokenHash).IsUnique();
             entity.HasIndex(e => e.UserId);
+        });
+
+        modelBuilder.Entity<Secret>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Key).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.EncryptedValue).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.Environment).HasMaxLength(50);
+            entity.HasIndex(e => e.DeploymentId);
+            entity.HasQueryFilter(e => !e.IsDeleted);
+        });
+
+        modelBuilder.Entity<SecretAuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ActorUserId).HasMaxLength(100);
+            entity.Property(e => e.ActorEmail).HasMaxLength(200);
+            entity.HasIndex(e => e.SecretId);
         });
     }
 }
