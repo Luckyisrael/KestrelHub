@@ -16,6 +16,20 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// CORS for Dashboard
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Dashboard", policy =>
+    {
+        policy.WithOrigins("http://localhost:5087", "https://localhost:5087",
+                           "http://localhost:5000", "https://localhost:5000",
+                           "http://localhost:5003", "https://localhost:5003")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 // Identity with strict password policy
 builder.Services.AddIdentity<KestrelHubUser, KestrelHubRole>(options =>
 {
@@ -103,6 +117,7 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseCors("Dashboard");
 
 if (app.Environment.IsDevelopment())
 {
@@ -116,11 +131,6 @@ app.UseMiddleware<ActiveUserMiddleware>();
 app.UseRateLimiter();
 
 app.MapControllers();
-
-// Serve Blazor WASM Dashboard
-app.UseStaticFiles();
-app.UseBlazorFrameworkFiles();
-app.MapFallbackToFile("index.html");
 
 app.Run();
 
