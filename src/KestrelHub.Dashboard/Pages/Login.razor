@@ -57,11 +57,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Check if setup is needed first
+        // Check if setup is needed
         try
         {
             var setupResponse = await Http.GetFromJsonAsync<JsonElement>("/api/setup/status");
-            if (!setupResponse.GetProperty("isSetupComplete").GetBoolean())
+            if (setupResponse.GetProperty("isSetupComplete").GetBoolean() == false)
             {
                 Navigation.NavigateTo("/setup");
                 return;
@@ -69,20 +69,7 @@
         }
         catch
         {
-            // API unreachable — show login anyway
-        }
-
-        var state = await AuthStateProvider.GetAuthenticationStateAsync();
-        if (state.User.Identity?.IsAuthenticated == true)
-        {
-            Navigation.NavigateTo("/");
-            return;
-        }
-
-        var refreshed = await AuthStateProvider.TrySilentRefreshAsync();
-        if (refreshed)
-        {
-            Navigation.NavigateTo("/");
+            // API unreachable — show login form
         }
     }
 

@@ -9,13 +9,10 @@ builder.RootComponents.Add<KestrelHub.Dashboard.App>("#app");
 // MudBlazor
 builder.Services.AddMudServices();
 
-// HttpClient with token injection
-builder.Services.AddTransient<AuthorizingMessageHandler>();
+// HttpClient — plain, no auth handler (token injected per-request)
 builder.Services.AddScoped(sp =>
 {
-    var handler = sp.GetRequiredService<AuthorizingMessageHandler>();
-    handler.InnerHandler = new HttpClientHandler();
-    var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5001") };
+    var http = new HttpClient { BaseAddress = new Uri("http://localhost:5001") };
     return http;
 });
 
