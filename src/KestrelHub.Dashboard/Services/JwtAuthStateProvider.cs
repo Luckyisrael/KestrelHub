@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.JSInterop;
 
 namespace KestrelHub.Dashboard.Services;
 
@@ -10,16 +11,38 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
 {
     private readonly HttpClient _httpClient;
     private readonly NavigationManager _navigation;
+    private readonly IJSRuntime _jsRuntime;
     private string? _accessToken;
 
-    public JwtAuthStateProvider(HttpClient httpClient, NavigationManager navigation)
+    public JwtAuthStateProvider(HttpClient httpClient, NavigationManager navigation, IJSRuntime jsRuntime)
     {
         _httpClient = httpClient;
         _navigation = navigation;
+        _jsRuntime = jsRuntime;
     }
+
+    public string? AccessToken => _accessToken;
+    public bool IsAuthenticated => !string.IsNullOrEmpty(_accessToken);
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
+        // Load token from localStorage if not in memory
+        if (string.IsNullOrEmpty(_accessToken))
+        {
+            try
+            {
+                _accessToken = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "kh_token");
+                if (!string.IsNullOrEmpty(_accessToken))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+                }
+            }
+            catch
+            {
+                // JS interop might not be ready yet
+            }
+        }
+
         if (string.IsNullOrEmpty(_accessToken))
         {
             return CreateAnonymousState();
@@ -50,6 +73,7 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
 
             var body = await response.Content.ReadFromJsonAsync<JsonElement>();
             _accessToken = body.GetProperty("accessToken").GetString();
+            await SaveTokenAsync();
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
             return true;
         }
@@ -69,7 +93,8 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
 
             var body = await response.Content.ReadFromJsonAsync<JsonElement>();
             _accessToken = body.GetProperty("accessToken").GetString();
-            _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+            await SaveTokenAsync();
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
             return true;
         }
@@ -89,11 +114,23 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
 
         _accessToken = null;
         _httpClient.DefaultRequestHeaders.Authorization = null;
+        try
+        {
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "kh_token");
+        }
+        catch { }
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 
-    public bool IsAuthenticated => !string.IsNullOrEmpty(_accessToken);
-    public string? AccessToken => _accessToken;
+    private async Task SaveTokenAsync()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(_accessToken))
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "kh_token", _accessToken);
+        }
+        catch { }
+    }
 
     private static AuthenticationState CreateAnonymousState()
     {
