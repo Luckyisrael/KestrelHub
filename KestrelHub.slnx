@@ -2,7 +2,6 @@
   <Folder Name="/src/">
     <Project Path="src/KestrelHub.Agent/KestrelHub.Agent.csproj" />
     <Project Path="src/KestrelHub.Controller/KestrelHub.Controller.csproj" />
-    <Project Path="src/KestrelHub.Dashboard/KestrelHub.Dashboard.csproj" />
     <Project Path="src/KestrelHub.Proxy/KestrelHub.Proxy.csproj" />
     <Project Path="src/KestrelHub.Shared/KestrelHub.Shared.csproj" />
   </Folder>

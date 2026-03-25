@@ -23,7 +23,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KestrelHub.Shared\KestrelHub.Shared.csproj" />
-    <ProjectReference Include="..\KestrelHub.Dashboard\KestrelHub.Dashboard.csproj" />
   </ItemGroup>
 
 </Project>
