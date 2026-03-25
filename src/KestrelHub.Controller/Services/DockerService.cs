@@ -121,45 +121,50 @@ public class DockerService : IDockerService
         return Task.Run(() =>
         {
             var tarPath = Path.Combine(Path.GetTempPath(), $"kestrelhub-{Guid.NewGuid():N}.tar");
-            var files = Directory.GetFiles(directory, "*", SearchOption.AllDirectories);
 
             using var fs = new FileStream(tarPath, FileMode.Create);
-            foreach (var file in files)
+
+            void WriteTarEntry(string relativePath, byte[] content)
             {
-                var relativePath = Path.GetRelativePath(directory, file);
                 var header = new byte[512];
                 var nameBytes = System.Text.Encoding.ASCII.GetBytes(relativePath.Replace('\\', '/'));
                 Array.Copy(nameBytes, 0, header, 0, Math.Min(nameBytes.Length, 100));
 
-                // file mode (octal 0100644)
-                header[100] = (byte)'0';
-                header[101] = (byte)'1';
-                header[102] = (byte)'0';
-                header[103] = (byte)'0';
-                header[104] = (byte)'6';
-                header[105] = (byte)'4';
-                header[106] = (byte)'4';
+                // file mode: 0644 (octal)
+                WriteOctalField(header, 100, 8, 0644);
+
+                // uid: 0
+                WriteOctalField(header, 108, 8, 0);
+
+                // gid: 0
+                WriteOctalField(header, 116, 8, 0);
 
                 // size
-                var size = new FileInfo(file).Length;
-                var sizeOctal = Convert.ToString(size, 8).PadLeft(11, '0');
-                var sizeBytes = System.Text.Encoding.ASCII.GetBytes(sizeOctal);
-                Array.Copy(sizeBytes, 0, header, 124, 11);
+                WriteOctalField(header, 124, 12, content.Length);
 
-                // checksum placeholder
-                header[148] = (byte)' ';
+                // mtime
+                var epoch = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                WriteOctalField(header, 136, 12, epoch);
 
-                // calculate checksum
+                // typeflag: '0' = regular file
+                header[156] = (byte)'0';
+
+                // magic: "ustar\0"
+                var magic = System.Text.Encoding.ASCII.GetBytes("ustar\0");
+                Array.Copy(magic, 0, header, 257, 6);
+
+                // version: "00"
+                header[263] = (byte)'0';
+                header[264] = (byte)'0';
+
+                // checksum: calculate with checksum field as spaces
+                for (int i = 148; i < 156; i++) header[i] = (byte)' ';
                 long checksum = 0;
                 for (int i = 0; i < 512; i++) checksum += header[i];
-                var checksumOctal = Convert.ToString(checksum, 8).PadLeft(7, '0');
-                var checksumBytes = System.Text.Encoding.ASCII.GetBytes(checksumOctal);
-                Array.Copy(checksumBytes, 0, header, 148, 7);
+                WriteOctalField(header, 148, 7, checksum);
+                header[155] = (byte)' ';
 
                 fs.Write(header, 0, 512);
-
-                // file content
-                var content = File.ReadAllBytes(file);
                 fs.Write(content, 0, content.Length);
 
                 // pad to 512-byte boundary
@@ -168,10 +173,25 @@ public class DockerService : IDockerService
                     fs.Write(new byte[512 - remainder], 0, 512 - remainder);
             }
 
+            foreach (var file in Directory.GetFiles(directory, "*", SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(directory, file);
+                var content = File.ReadAllBytes(file);
+                WriteTarEntry(relativePath, content);
+            }
+
             // two empty 512-byte blocks to signal end of archive
             fs.Write(new byte[1024], 0, 1024);
 
             return tarPath;
         });
+    }
+
+    private static void WriteOctalField(byte[] header, int offset, int length, long value)
+    {
+        var octal = Convert.ToString(value, 8).PadLeft(length - 1, '0');
+        var bytes = System.Text.Encoding.ASCII.GetBytes(octal);
+        Array.Copy(bytes, 0, header, offset, Math.Min(bytes.Length, length - 1));
+        header[offset + length - 1] = 0;
     }
 }
