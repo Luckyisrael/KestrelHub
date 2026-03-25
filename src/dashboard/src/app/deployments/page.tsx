@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, CloudOff, StopCircle, Trash2 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import { api } from '@/lib/api';
@@ -14,44 +15,29 @@ interface Deployment {
 
 export default function DeploymentsPage() {
   const router = useRouter();
-  const [deployments, setDeployments] = useState<Deployment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: '', gitUrl: '', branch: 'main' });
 
-  const load = async () => {
-    setLoading(true);
-    try { setDeployments(await api<Deployment[]>('/api/deployments')); }
-    catch { }
-    setLoading(false);
-  };
+  const { data: deployments = [], isLoading } = useQuery({
+    queryKey: ['deployments'],
+    queryFn: () => api<Deployment[]>('/api/deployments'),
+  });
 
-  useEffect(() => { load(); }, []);
+  const createMut = useMutation({
+    mutationFn: () => api('/api/deployments', { method: 'POST', body: JSON.stringify(form) }),
+    onSuccess: () => { setShowCreate(false); setForm({ name: '', gitUrl: '', branch: 'main' }); qc.invalidateQueries({ queryKey: ['deployments'] }); },
+  });
 
-  const handleCreate = async () => {
-    if (!form.gitUrl) return;
-    setCreating(true);
-    try {
-      await api('/api/deployments', { method: 'POST', body: JSON.stringify(form) });
-      setShowCreate(false);
-      setForm({ name: '', gitUrl: '', branch: 'main' });
-      await load();
-    } catch (e: any) { alert(e.message); }
-    setCreating(false);
-  };
+  const stopMut = useMutation({
+    mutationFn: (id: string) => api(`/api/deployments/${id}/stop`, { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['deployments'] }),
+  });
 
-  const handleStop = async (id: string) => {
-    if (!confirm('Stop this deployment?')) return;
-    try { await api(`/api/deployments/${id}/stop`, { method: 'POST' }); await load(); }
-    catch (e: any) { alert(e.message); }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this deployment permanently?')) return;
-    try { await api(`/api/deployments/${id}`, { method: 'DELETE' }); setDeployments(d => d.filter(x => x.id !== id)); }
-    catch (e: any) { alert(e.message); }
-  };
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => api(`/api/deployments/${id}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['deployments'] }),
+  });
 
   return (
     <AppShell>
@@ -68,7 +54,7 @@ export default function DeploymentsPage() {
           </button>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" /></div>
         ) : deployments.length === 0 ? (
           <div className="text-center py-20 bg-[var(--surface)] rounded-xl border border-[var(--border)]">
@@ -93,9 +79,7 @@ export default function DeploymentsPage() {
                     <tr key={d.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-hover)]">
                       <td className="px-4 py-3">
                         <button onClick={() => router.push(`/deployments/${d.id}`)}
-                          className="text-sm font-medium hover:underline" style={{ color: 'var(--primary)' }}>
-                          {d.name}
-                        </button>
+                          className="text-sm font-medium hover:underline" style={{ color: 'var(--primary)' }}>{d.name}</button>
                       </td>
                       <td className="px-4 py-3 text-sm text-[var(--text-muted)] max-w-[200px] truncate">{d.gitUrl}</td>
                       <td className="px-4 py-3 text-sm text-[var(--text-muted)]">{d.branch}</td>
@@ -107,9 +91,9 @@ export default function DeploymentsPage() {
                       <td className="px-4 py-3">
                         <div className="flex gap-1 justify-end">
                           {d.status === 'Running' && (
-                            <button onClick={() => handleStop(d.id)} className="p-1.5 rounded hover:bg-[var(--surface-hover)] text-amber-400"><StopCircle size={16} /></button>
+                            <button onClick={() => stopMut.mutate(d.id)} className="p-1.5 rounded hover:bg-[var(--surface-hover)] text-amber-400"><StopCircle size={16} /></button>
                           )}
-                          <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded hover:bg-[var(--surface-hover)] text-red-400"><Trash2 size={16} /></button>
+                          <button onClick={() => { if (confirm('Delete?')) deleteMut.mutate(d.id); }} className="p-1.5 rounded hover:bg-[var(--surface-hover)] text-red-400"><Trash2 size={16} /></button>
                         </div>
                       </td>
                     </tr>
@@ -120,7 +104,6 @@ export default function DeploymentsPage() {
           </div>
         )}
 
-        {/* Create Dialog */}
         {showCreate && (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 w-full max-w-md">
@@ -135,9 +118,9 @@ export default function DeploymentsPage() {
               </div>
               <div className="flex gap-3 mt-5">
                 <button onClick={() => setShowCreate(false)} className="flex-1 h-10 rounded-lg text-sm border border-[var(--border)] text-[var(--text-muted)]">Cancel</button>
-                <button onClick={handleCreate} disabled={creating || !form.gitUrl}
+                <button onClick={() => createMut.mutate()} disabled={createMut.isPending || !form.gitUrl}
                   className="flex-1 h-10 rounded-lg text-sm font-semibold text-black disabled:opacity-50" style={{ background: 'var(--primary)' }}>
-                  {creating ? 'Deploying...' : 'Deploy'}
+                  {createMut.isPending ? 'Deploying...' : 'Deploy'}
                 </button>
               </div>
             </div>
