@@ -88,7 +88,8 @@ public class DeploymentOrchestrator : IDeploymentOrchestrator
 
             // Step 4: Build image
             await _repository.UpdateStatusAsync(deploymentId, DeploymentStatus.Building);
-            var imageTag = $"kestrelhub/{deployment.Name}:{deploymentId.ToString()[..8]}".ToLowerInvariant();
+            var sanitizedName = deployment.Name.Replace(" ", "-").ToLowerInvariant();
+            var imageTag = $"kestrelhub/{sanitizedName}:{deploymentId.ToString()[..8]}";
             var dockerfilePathFull = Path.Combine(buildPath, "Dockerfile");
 
             await LogAsync(deploymentId, $"Building Docker image: {imageTag}");
